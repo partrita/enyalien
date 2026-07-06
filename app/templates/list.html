@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Enyalien - Card List{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto w-full py-4 space-y-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h2 class="text-3xl font-extrabold font-outfit text-white tracking-wide">카드 목록</h2>
+            <p class="text-gray-400 text-sm mt-1">등록된 모든 카드의 학습 상태를 조회할 수 있습니다.</p>
+        </div>
+        <div class="flex items-center gap-4 w-full sm:w-auto">
+            <div class="flex items-center gap-2">
+                <span class="text-gray-400 text-sm font-medium whitespace-nowrap">덱 필터:</span>
+                <select id="deck-filter" onchange="window.location.href = this.value ? '/cards?deck=' + encodeURIComponent(this.value) : '/cards'" 
+                        class="select select-bordered select-sm bg-base-200 text-base-content border-white/10 rounded-xl focus:outline-none focus:border-indigo-500">
+                    <option value="">전체보기</option>
+                    {% for d in decks %}
+                        <option value="{{ d }}" {% if selected_deck == d %}selected{% endif %}>{{ d }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <a href="/cards/add" class="btn btn-primary text-primary-content font-semibold shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                새 카드 추가
+            </a>
+        </div>
+    </div>
+
+    <!-- Cards Table Panel -->
+    <div class="glass-panel rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full text-left text-gray-300">
+                <thead>
+                    <tr class="border-b border-white/5 text-gray-400 uppercase tracking-wider text-xs">
+                        <th class="p-4 pl-6">ID</th>
+                        <th class="p-4">덱 (Deck)</th>
+                        <th class="p-4">앞면 요약</th>
+                        <th class="p-4">뒷면 요약</th>
+                        <th class="p-4 text-center">반복 횟수</th>
+                        <th class="p-4 text-center">복습 주기</th>
+                        <th class="p-4 text-center">쉬움 정도</th>
+                        <th class="p-4">다음 복습 일정</th>
+                        <th class="p-4 text-right pr-6">관리</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    {% if cards %}
+                        {% for card in cards %}
+                        <tr class="hover:bg-white/5 transition-colors">
+                            <td class="p-4 pl-6 font-mono text-gray-500 text-sm">#{{ card.id }}</td>
+                            <td class="p-4 text-sm text-gray-300 font-medium">{{ card.deck }}</td>
+                            <td class="p-4 truncate max-w-xs font-semibold text-gray-200">
+                                {{ card.front | truncate(40) }}
+                            </td>
+                            <td class="p-4 truncate max-w-xs text-gray-400">
+                                {{ card.back | truncate(40) }}
+                            </td>
+                            <td class="p-4 text-center">
+                                <span class="badge badge-ghost border-white/5 text-xs text-gray-400 font-mono">{{ card.repetition }}회</span>
+                            </td>
+                            <td class="p-4 text-center font-mono text-sm">
+                                {{ card.interval }}일
+                            </td>
+                            <td class="p-4 text-center font-mono text-sm">
+                                {{ card.easiness | round(2) }}
+                            </td>
+                            <td class="p-4 text-sm text-gray-400">
+                                {% if card.next_review <= now %}
+                                    <span class="text-primary font-semibold flex items-center gap-1.5">
+                                        <span class="h-2 w-2 rounded-full bg-primary animate-pulse"></span>
+                                        복습 대기중
+                                    </span>
+                                {% else %}
+                                    {{ card.next_review.strftime('%Y-%m-%d %H:%M') }}
+                                {% endif %}
+                            </td>
+                            <td class="p-4 text-right pr-6 flex justify-end gap-2">
+                                <a href="/cards/edit/{{ card.id }}"
+                                   class="btn btn-ghost btn-xs text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-md">
+                                    변경
+                                </a>
+                                <button 
+                                    hx-delete="/cards/delete/{{ card.id }}"
+                                    hx-confirm="정말로 이 카드를 삭제하시겠습니까?"
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML"
+                                    class="btn btn-ghost btn-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-md">
+                                    삭제
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9" class="p-12 text-center text-gray-500 italic">
+                                등록된 카드가 없습니다. 카드를 새로 추가해 주세요.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

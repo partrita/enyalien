@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Enyalien - Anki SRS{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
+    <!-- Inline script to apply theme immediately before paint to prevent flicker -->
+    <script>
+        const storedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', storedTheme);
+    </script>
+    <!-- Tailwind CSS & DaisyUI CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.10.1/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom DaisyUI themes injection (official light and dark themes) -->
+    <script>
+        tailwind.config = {
+            daisyui: {
+                themes: ["dark", "light"]
+            }
+        }
+    </script>
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.11"></script>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        /* Theme gradient settings */
+        html[data-theme="dark"] body {
+            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+            color: #f8fafc;
+        }
+        html[data-theme="light"] body {
+            background: radial-gradient(circle at 50% 50%, #f8fafc 0%, #cbd5e1 100%);
+            color: #0f172a;
+        }
+
+        .font-outfit {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Glass Panel overrides */
+        .glass-panel {
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+        }
+        html[data-theme="dark"] .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+        }
+        html[data-theme="light"] .glass-panel {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.06);
+        }
+
+        /* Glass Navbar overrides */
+        .glass-navbar {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: background 0.3s ease, border-bottom 0.3s ease;
+        }
+        html[data-theme="dark"] .glass-navbar {
+            background: rgba(30, 41, 59, 0.85);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        html[data-theme="light"] .glass-navbar {
+            background: rgba(248, 250, 252, 0.85);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .flashcard-inner {
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Light theme color accessibility overrides */
+        html[data-theme="light"] .text-white:not(.btn):not([class*="btn-"]):not(.btn *) {
+            color: #0f172a !important;
+        }
+        html[data-theme="light"] .text-gray-100 {
+            color: #0f172a !important;
+        }
+        html[data-theme="light"] .text-gray-200 {
+            color: #1e293b !important;
+        }
+        html[data-theme="light"] .text-gray-300 {
+            color: #334155 !important;
+        }
+        html[data-theme="light"] .text-gray-400 {
+            color: #475569 !important;
+        }
+        html[data-theme="light"] .text-gray-500 {
+            color: #64748b !important;
+        }
+        
+        /* Override prose typography classes in light mode */
+        html[data-theme="light"] .prose-invert {
+            --tw-prose-body: #000000;
+            --tw-prose-headings: #000000;
+            --tw-prose-lead: #000000;
+            --tw-prose-links: #2563eb;
+            --tw-prose-bold: #000000;
+            --tw-prose-counters: #000000;
+            --tw-prose-bullets: #000000;
+            --tw-prose-hr: #cbd5e1;
+            --tw-prose-quotes: #000000;
+            --tw-prose-quote-borders: #cbd5e1;
+            --tw-prose-captions: #000000;
+            --tw-prose-code: #e11d48;
+            --tw-prose-pre-code: #f1f5f9;
+            --tw-prose-pre-bg: #1e293b;
+            --tw-prose-th-borders: #94a3b8;
+            --tw-prose-td-borders: #cbd5e1;
+        }
+        /* Custom card elements typography adjustments */
+        html[data-theme="light"] .card-markdown-body,
+        html[data-theme="light"] .card-markdown-body * {
+            color: #000000 !important;
+        }
+        html[data-theme="light"] .card-markdown-body a {
+            color: #2563eb !important;
+        }
+        html[data-theme="light"] .card-markdown-body code {
+            background-color: rgba(225, 29, 72, 0.1) !important;
+            color: #e11d48 !important;
+        }
+
+        /* Light theme: primary action buttons style overrides */
+        html[data-theme="light"] .btn-primary {
+            background-color: #e2e8f0 !important; /* Bright slate gray */
+            color: #0f172a !important; /* Dark text */
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: 0 4px 12px 0 rgba(15, 23, 42, 0.05) !important;
+        }
+        html[data-theme="light"] .btn-primary:hover {
+            background-color: #cbd5e1 !important;
+            border-color: #cbd5e1 !important;
+        }
+
+        /* Light theme: outline buttons style overrides */
+        html[data-theme="light"] .btn-outline {
+            color: #0f172a !important; /* Dark text */
+            border-color: rgba(15, 23, 42, 0.25) !important; /* Soft dark border */
+        }
+        html[data-theme="light"] .btn-outline:hover {
+            background-color: rgba(15, 23, 42, 0.05) !important;
+            color: #000000 !important;
+            border-color: rgba(15, 23, 42, 0.4) !important;
+        }
+
+        /* Light theme: keyboard shortcut badge (kbd) style overrides */
+        html[data-theme="light"] .kbd {
+            background-color: #cbd5e1 !important; /* slate-300: solid readable background */
+            color: #0f172a !important; /* solid black text */
+            border-color: #94a3b8 !important; /* slate-400 border */
+            box-shadow: 0 2px 4px 0 rgba(15, 23, 42, 0.05) !important;
+        }
+
+        /* Review button custom colors (High accessibility & premium styling) */
+        .btn-review {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: #ffffff !important;
+            transition: all 0.3s ease;
+        }
+        .btn-review:hover {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            transform: translateY(-1px);
+        }
+        /* Light theme: bright indigo pastel background with deep indigo text */
+        html[data-theme="light"] .btn-review {
+            background: #e0e7ff !important;
+            color: #4338ca !important;
+            border: 1px solid #c7d2fe !important;
+            box-shadow: 0 4px 12px 0 rgba(67, 56, 202, 0.1) !important;
+        }
+        html[data-theme="light"] .btn-review:hover {
+            background: #c7d2fe !important;
+            color: #3730a3 !important;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="flex flex-col min-height-screen">
+
+    <!-- Premium Navigation Bar -->
+    <header class="sticky top-0 z-50 glass-navbar">
+        <div class="navbar max-w-6xl mx-auto px-4 md:px-8">
+            <div class="navbar-start">
+                <a href="/" class="flex items-center gap-2 font-outfit font-extrabold text-2xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-500 hover:opacity-90 transition-all duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    ENYALIEN
+                </a>
+            </div>
+            
+            <div class="navbar-center hidden md:flex">
+                <ul class="menu menu-horizontal px-1 gap-2 font-medium">
+                    <li>
+                        <a href="/" class="px-4 py-2 rounded-lg hover:bg-white/5 transition-all hover:text-primary">대시보드</a>
+                    </li>
+                    <li>
+                        <a href="/decks" class="px-4 py-2 rounded-lg hover:bg-white/5 transition-all hover:text-primary">덱 목록</a>
+                    </li>
+                    <li>
+                        <a href="/cards" class="px-4 py-2 rounded-lg hover:bg-white/5 transition-all hover:text-primary">카드 목록</a>
+                    </li>
+                    <li>
+                        <a href="/cards/add" class="px-4 py-2 rounded-lg hover:bg-white/5 transition-all hover:text-primary">새 카드 추가</a>
+                    </li>
+                    <li>
+                        <a href="/review" class="px-4 py-2 rounded-lg btn-review font-semibold">복습하기</a>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="navbar-end">
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle" class="btn btn-ghost btn-circle text-current mr-2" aria-label="테마 변경">
+                    <!-- Sun icon (shows in dark mode) -->
+                    <svg id="theme-sun" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                    </svg>
+                    <!-- Moon icon (shows in light mode) -->
+                    <svg id="theme-moon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+
+                <!-- Quick stats count helper -->
+                <div id="nav-due-counter" class="badge badge-primary badge-outline py-3 px-4 font-semibold text-xs tracking-wider gap-2">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                    </span>
+                    <span id="due-count-val">불러오는 중...</span>
+                </div>
+                
+                <!-- Mobile Dropdown Menu -->
+                <div class="dropdown dropdown-end md:hidden ml-2">
+                    <button tabindex="0" class="btn btn-ghost btn-circle text-current">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+                        </svg>
+                    </button>
+                    <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-2xl bg-base-200 border border-white/5 rounded-box w-52 gap-1 text-base-content">
+                        <li><a href="/">대시보드</a></li>
+                        <li><a href="/decks">덱 목록</a></li>
+                        <li><a href="/cards">카드 목록</a></li>
+                        <li><a href="/cards/add">새 카드 추가</a></li>
+                        <li><a href="/review" class="btn-review mt-1 py-2 font-semibold rounded-lg text-center flex justify-center">복습하기</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-5xl w-full mx-auto px-4 md:px-8 py-8 flex flex-col justify-center">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer footer-center p-6 bg-black/5 text-gray-500 border-t border-black/5 text-xs">
+        <aside>
+            <p>Enyalien Spaced Repetition Flashcard System © 2026. Made with FastAPI & HTMX.</p>
+        </aside>
+    </footer>
+
+    <!-- Global due count poller via HTMX -->
+    <div hx-get="/review/due-count" hx-trigger="load, queue-updated from:body" hx-target="#due-count-val" hx-swap="innerHTML" class="hidden"></div>
+    
+    <!-- Theme Toggle Handling Script -->
+    <script>
+        const toggleBtn = document.getElementById('theme-toggle');
+        const sunIcon = document.getElementById('theme-sun');
+        const moonIcon = document.getElementById('theme-moon');
+
+        function updateThemeIcons(theme) {
+            if (theme === 'dark') {
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            } else {
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            }
+        }
+
+        // Apply icons based on current loaded state
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        updateThemeIcons(currentTheme);
+
+        toggleBtn.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const target = current === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', target);
+            localStorage.setItem('theme', target);
+            updateThemeIcons(target);
+        });
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,39 @@
+<div id="review-card" 
+     class="swipe-card glass-panel rounded-3xl w-full p-8 md:p-10 flex flex-col justify-between items-center text-center relative border border-white/10 shadow-2xl select-none"
+     data-card-id="{{ card.id }}"
+     data-state="front">
+     
+    <!-- Top badge/metadata info -->
+    <div class="flex justify-between items-center w-full mb-6 text-xs text-gray-500 font-medium">
+        <div class="badge badge-outline border-white/10 gap-1 py-2 px-3 text-gray-400">
+            <span>Interval:</span>
+            <span class="font-mono text-gray-300">{{ card.interval }}d</span>
+        </div>
+        <div class="text-indigo-400 font-bold uppercase tracking-wider">
+            {% if mode == 'reverse' %}뒷면 (Question / Back){% else %}질문 (Question / Front){% endif %}
+        </div>
+        <div class="badge badge-outline border-white/10 gap-1 py-2 px-3 text-gray-400">
+            <span>Ease:</span>
+            <span class="font-mono text-gray-300">{{ card.easiness | round(2) }}</span>
+        </div>
+    </div>
+
+    <!-- Question Content -->
+    <div class="flex-grow flex flex-col justify-center items-center w-full min-h-[220px] max-w-full overflow-hidden">
+        <div class="card-markdown-body w-full text-center prose prose-invert">
+            {{ rendered_front | safe }}
+        </div>
+    </div>
+
+    <!-- Show Answer Trigger -->
+    <div class="w-full mt-8">
+        <button id="btn-show-answer"
+                hx-get="/review/card/{{ card.id }}?reveal=true{% if deck %}&deck={{ deck }}{% endif %}"
+                hx-include="[name='mode']"
+                hx-target="#review-card"
+                hx-swap="outerHTML"
+                class="btn btn-primary text-primary-content w-full font-bold shadow-lg hover:shadow-primary/20 py-4 h-auto rounded-2xl transition-all duration-300">
+            정답 확인 (Space / Tap)
+        </button>
+    </div>
+</div>

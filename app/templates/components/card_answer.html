@@ -1,0 +1,56 @@
+<div id="review-card" 
+     class="swipe-card glass-panel rounded-3xl w-full p-8 md:p-10 flex flex-col justify-between items-center text-center relative border border-white/10 shadow-2xl select-none"
+     data-card-id="{{ card.id }}"
+     data-state="back">
+     
+    <!-- Top badge/metadata info -->
+    <div class="flex justify-between items-center w-full mb-6 text-xs text-gray-500 font-medium">
+        <div class="badge badge-outline border-white/10 gap-1 py-2 px-3 text-gray-400">
+            <span>Interval:</span>
+            <span class="font-mono text-gray-300">{{ card.interval }}d</span>
+        </div>
+        <div class="text-indigo-400 font-bold uppercase tracking-wider">
+            {% if mode == 'reverse' %}앞면 (Answer / Front){% else %}정답 & 설명 (Answer / Back){% endif %}
+        </div>
+        <div class="badge badge-outline border-white/10 gap-1 py-2 px-3 text-gray-400">
+            <span>Ease:</span>
+            <span class="font-mono text-gray-300">{{ card.easiness | round(2) }}</span>
+        </div>
+    </div>
+
+    <!-- Question + Answer Content -->
+    <div class="flex-grow flex flex-col justify-center items-center w-full min-h-[220px] max-w-full overflow-hidden">
+        <!-- Question (Mini version) -->
+        <div class="card-markdown-body opacity-50 text-sm max-h-24 overflow-hidden mb-4 pb-4 border-b border-white/5 w-full text-center">
+            {{ rendered_front | safe }}
+        </div>
+        
+        <!-- Answer -->
+        <div class="card-markdown-body w-full text-center prose prose-invert">
+            {{ rendered_back | safe }}
+        </div>
+    </div>
+
+    <!-- Feedback Options (Again / Good) -->
+    <div class="w-full mt-8 grid grid-cols-2 gap-4">
+        <!-- Again Button (Forgot / Unknown) -->
+        <button id="btn-again"
+                hx-post="/review/card/{{ card.id }}/submit?rating=again{% if deck %}&deck={{ deck }}{% endif %}"
+                hx-include="[name='mode']"
+                hx-target="#review-container"
+                hx-swap="innerHTML"
+                class="btn btn-outline btn-error w-full font-bold py-4 h-auto rounded-2xl transition-all duration-300">
+            모름 (Again)
+        </button>
+        
+        <!-- Good Button (Remembered / Know) -->
+        <button id="btn-good"
+                hx-post="/review/card/{{ card.id }}/submit?rating=good{% if deck %}&deck={{ deck }}{% endif %}"
+                hx-include="[name='mode']"
+                hx-target="#review-container"
+                hx-swap="innerHTML"
+                class="btn btn-success text-success-content w-full font-bold shadow-lg hover:shadow-success/20 py-4 h-auto rounded-2xl transition-all duration-300">
+            알고 있음 (Good)
+        </button>
+    </div>
+</div>

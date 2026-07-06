@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Enyalien - Dashboard{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto w-full space-y-10 py-4">
+    <!-- Welcome Panel -->
+    <div class="text-center md:text-left space-y-3">
+        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight font-outfit text-white">
+            에빙하우스 망각곡선 <br class="md:hidden"> 스마트 복습
+        </h1>
+        <p class="text-gray-400 max-w-xl text-lg font-light leading-relaxed">
+            Enyalien은 망각곡선 및 SM-2 알고리즘을 기반으로 장기 기억을 가장 과학적으로 도우는 개인용 암기 시스템입니다.
+        </p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Due Card Stat -->
+        <div class="glass-panel rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between h-48 transition-all hover:scale-[1.02] hover:shadow-indigo-500/10">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl -mr-6 -mt-6"></div>
+            <div>
+                <span class="text-xs uppercase tracking-wider text-primary font-bold">오늘의 복습 카드</span>
+                <h3 class="text-5xl font-extrabold font-outfit text-white mt-2" id="dashboard-due-count">
+                    {{ due_count }}
+                </h3>
+            </div>
+            <div class="text-sm text-gray-400">
+                망각하기 전에 기억을 강화하세요.
+            </div>
+        </div>
+
+        <!-- Total Cards Stat -->
+        <div class="glass-panel rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between h-48 transition-all hover:scale-[1.02] hover:shadow-secondary/10">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-secondary/10 rounded-full blur-2xl -mr-6 -mt-6"></div>
+            <div>
+                <span class="text-xs uppercase tracking-wider text-secondary font-bold">전체 카드</span>
+                <h3 class="text-5xl font-extrabold font-outfit text-white mt-2">
+                    {{ total_count }}
+                </h3>
+            </div>
+            <div class="text-sm text-gray-400">
+                지속적으로 카드를 늘려보세요.
+            </div>
+        </div>
+
+        <!-- Accuracy/Reviews Today Stat -->
+        <div class="glass-panel rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between h-48 transition-all hover:scale-[1.02] hover:shadow-accent/10">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-accent/10 rounded-full blur-2xl -mr-6 -mt-6"></div>
+            <div>
+                <span class="text-xs uppercase tracking-wider text-accent font-bold">최근 복습 기록</span>
+                <h3 class="text-5xl font-extrabold font-outfit text-white mt-2">
+                    {{ log_count }}
+                </h3>
+            </div>
+            <div class="text-sm text-gray-400">
+                꾸준함이 장기 기억의 지름길입니다.
+            </div>
+        </div>
+    </div>
+    <!-- Decks List Section -->
+    <div class="space-y-4">
+        <h2 class="text-2xl font-bold font-outfit text-white tracking-wide">🗂️ 내 덱 목록 (My Decks)</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% if decks %}
+                {% for deck in decks %}
+                <div class="glass-panel rounded-2xl p-5 border border-white/5 shadow-lg flex justify-between items-center hover:bg-white/5 transition-all">
+                    <div>
+                        <h4 class="text-lg font-bold text-gray-200">{{ deck.name }}</h4>
+                        <p class="text-xs text-gray-400 mt-1">총 {{ deck.total_count }}장의 카드</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        {% if deck.due_count > 0 %}
+                            <span class="badge badge-primary font-mono font-bold text-xs py-2 px-2.5">{{ deck.due_count }} 복습</span>
+                            <a href="/review?deck={{ deck.name }}" class="btn btn-sm btn-primary text-primary-content rounded-xl font-bold">
+                                복습
+                            </a>
+                        {% else %}
+                            <span class="badge badge-ghost border-white/5 text-gray-500 font-mono text-xs py-2 px-2.5">완료</span>
+                            <a href="/review?deck={{ deck.name }}" class="btn btn-sm btn-ghost border-white/10 text-gray-400 hover:bg-white/5 rounded-xl font-bold">
+                                복습
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="glass-panel rounded-2xl p-6 border border-white/5 text-center text-gray-500 italic md:col-span-2">
+                    덱이 없습니다. 카드를 추가하면 자동으로 덱이 생성됩니다.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Dynamic Dashboard Poller updates this page dynamically -->
+    <div hx-get="/review/due-count" hx-trigger="queue-updated from:body" hx-target="#dashboard-due-count" hx-swap="innerHTML" class="hidden"></div>
+</div>
+{% endblock %}

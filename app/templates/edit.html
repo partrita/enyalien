@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Enyalien - Edit Flashcard{% endblock %}
+
+{% block head %}
+<!-- Marked library for real-time markdown preview -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+    .markdown-preview img {
+        max-width: 100%;
+        border-radius: 0.5rem;
+    }
+
+    .markdown-preview pre {
+        background-color: rgba(0, 0, 0, 0.3);
+        padding: 0.75rem;
+        border-radius: 0.375rem;
+        overflow-x: auto;
+    }
+
+    .markdown-preview code {
+        font-family: monospace;
+        color: #f43f5e;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto w-full py-4">
+    <div class="glass-panel rounded-3xl p-6 md:p-8 space-y-6">
+        <div>
+            <h2 class="text-3xl font-extrabold font-outfit text-white tracking-wide">암기 카드 변경</h2>
+            <p class="text-gray-400 text-sm mt-1">카드의 질문과 정답 내용을 수정합니다. 마크다운 문법이 지원됩니다.</p>
+        </div>
+
+        <form action="/cards/edit/{{ card.id }}" method="POST" class="space-y-6">
+            
+            <!-- Deck Input -->
+            <div class="space-y-2">
+                <label class="label font-semibold text-gray-200">소속 덱 이름 (Deck Name)</label>
+                <input type="text" name="deck" value="{{ card.deck }}" placeholder="예: 영어 단어, 화학 기호"
+                    class="input input-bordered w-full bg-base-200 border-base-content/15 text-base-content focus:border-indigo-500 focus:outline-none text-base"
+                    required />
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Front Editor -->
+                <div class="space-y-2 flex flex-col">
+                    <label class="label font-semibold text-gray-200">앞면 (질문 / Front)</label>
+                    <textarea name="front" id="front-input" rows="6"
+                        class="textarea textarea-bordered w-full bg-base-200 border-base-content/15 text-base-content focus:border-indigo-500 focus:outline-none text-base placeholder-base-content/40"
+                        required>{{ card.front }}</textarea>
+                    
+                    <div class="mt-2 flex-grow">
+                        <span class="text-xs text-gray-400 font-semibold mb-1 block">앞면 실시간 미리보기:</span>
+                        <div id="front-preview" class="markdown-preview p-4 rounded-2xl bg-base-300/50 border border-white/5 min-h-[100px] text-sm overflow-auto prose prose-invert max-w-full"></div>
+                    </div>
+                </div>
+
+                <!-- Back Editor -->
+                <div class="space-y-2 flex flex-col">
+                    <label class="label font-semibold text-gray-200">뒷면 (정답 및 설명 / Back)</label>
+                    <textarea name="back" id="back-input" rows="6"
+                        class="textarea textarea-bordered w-full bg-base-200 border-base-content/15 text-base-content focus:border-indigo-500 focus:outline-none text-base placeholder-base-content/40"
+                        required>{{ card.back }}</textarea>
+                    
+                    <div class="mt-2 flex-grow">
+                        <span class="text-xs text-gray-400 font-semibold mb-1 block">뒷면 실시간 미리보기:</span>
+                        <div id="back-preview" class="markdown-preview p-4 rounded-2xl bg-base-300/50 border border-white/5 min-h-[100px] text-sm overflow-auto prose prose-invert max-w-full"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-3 justify-end pt-4 border-t border-white/5">
+                <a href="/cards" class="btn btn-ghost hover:bg-white/5 text-gray-400 hover:text-white">취소</a>
+                <button type="submit"
+                    class="btn btn-primary px-6 text-primary-content font-semibold shadow-lg shadow-primary/20">
+                    변경사항 저장
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const frontInput = document.getElementById("front-input");
+        const frontPreview = document.getElementById("front-preview");
+        const backInput = document.getElementById("back-input");
+        const backPreview = document.getElementById("back-preview");
+
+        function updatePreview(input, preview) {
+            preview.innerHTML = marked.parse(input.value);
+        }
+
+        // Initialize previews
+        updatePreview(frontInput, frontPreview);
+        updatePreview(backInput, backPreview);
+
+        // Bind keyup/change events
+        frontInput.addEventListener("input", () => updatePreview(frontInput, frontPreview));
+        backInput.addEventListener("input", () => updatePreview(backInput, backPreview));
+    });
+</script>
+{% endblock %}

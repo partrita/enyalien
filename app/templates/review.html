@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Enyalien - Spaced Repetition Review{% endblock %}
+
+{% block head %}
+<style>
+    /* Card Flip & Animation Utilities */
+    .perspective-1000 {
+        perspective: 1000px;
+    }
+    .backface-hidden {
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+    }
+    .rotate-y-180 {
+        transform: rotateY(180deg);
+    }
+    
+    /* Swipe Card Transitions */
+    .swipe-card {
+        transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+        touch-action: none; /* Disable default scrolling on the card */
+    }
+    .swipe-card.dragging {
+        transition: none;
+    }
+    
+    /* Markdown Styles inside Card */
+    .card-markdown-body h1 { font-size: 1.875rem; font-weight: 800; margin-bottom: 1rem; color: #fff; }
+    .card-markdown-body h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; color: #fff; }
+    .card-markdown-body h3 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; color: #fff; }
+    .card-markdown-body p { margin-bottom: 1rem; color: #d1d5db; line-height: 1.625; }
+    .card-markdown-body ul, .card-markdown-body ol { margin-left: 1.5rem; margin-bottom: 1rem; list-style-type: disc; }
+    .card-markdown-body code { font-family: monospace; background-color: rgba(244, 63, 94, 0.1); color: #f43f5e; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.9em; }
+    .card-markdown-body pre { background-color: #0d1117; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; border: 1px solid rgba(255, 255, 255, 0.05); }
+    .card-markdown-body pre code { background-color: transparent; color: #e1e4e8; padding: 0; }
+    .card-markdown-body blockquote { border-left: 4px solid #6366f1; padding-left: 1rem; color: #9ca3af; font-style: italic; margin-bottom: 1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto w-full flex flex-col items-center justify-center py-4 select-none space-y-4">
+    
+    <!-- Review Direction Mode Selector -->
+    <div class="w-full flex justify-between items-center px-4">
+        <span class="text-xs uppercase tracking-wider font-bold text-gray-500">복습 방향 설정</span>
+        <select id="review-mode-select" name="mode" 
+                class="select select-bordered select-sm bg-base-200 border-white/10 text-xs font-semibold focus:outline-none"
+                hx-get="/review/next{% if deck %}?deck={{ deck }}{% endif %}" 
+                hx-target="#review-container" 
+                hx-trigger="change">
+            <option value="forward" selected>기본 복습 (앞면 ➡️ 뒷면)</option>
+            <option value="reverse">역방향 복습 (뒷면 ➡️ 앞면)</option>
+        </select>
+    </div>
+    
+    <!-- Outer reviews controller container -->
+    <div id="review-container" class="w-full flex justify-center min-h-[450px]"
+         hx-get="/review/next{% if deck %}?deck={{ deck }}{% endif %}" 
+         hx-include="[name='mode']"
+         hx-trigger="load" 
+         hx-target="this" 
+         hx-swap="innerHTML">
+         
+         <!-- Skeleton Loader on loading first card -->
+         <div class="glass-panel rounded-3xl w-full p-8 flex flex-col justify-between items-center text-center animate-pulse">
+             <div class="h-6 bg-white/10 rounded-full w-24 mb-6"></div>
+             <div class="flex-grow flex flex-col justify-center items-center w-full space-y-4">
+                 <div class="h-8 bg-white/10 rounded-full w-3/4"></div>
+                 <div class="h-4 bg-white/10 rounded-full w-1/2"></div>
+             </div>
+             <div class="h-12 bg-white/10 rounded-xl w-full mt-8"></div>
+         </div>
+    </div>
+
+    <!-- Help Indicator / Keyboard shortcuts tooltip -->
+    <div class="mt-8 text-center text-gray-500 text-xs hidden md:flex flex-col gap-1 tracking-wider">
+        <div class="flex items-center justify-center gap-4">
+            <span><kbd class="kbd kbd-sm bg-neutral-800 border-white/10 text-gray-400">Space</kbd> / <kbd class="kbd kbd-sm bg-neutral-800 border-white/10 text-gray-400">Enter</kbd> 정답 확인</span>
+            <span><kbd class="kbd kbd-sm bg-neutral-800 border-white/10 text-gray-400">←</kbd> 모름</span>
+            <span><kbd class="kbd kbd-sm bg-neutral-800 border-white/10 text-gray-400">→</kbd> 알고있음</span>
+        </div>
+    </div>
+    
+    <div class="mt-8 text-center text-gray-500 text-xs md:hidden tracking-wider">
+        <span>스와이프 제스처: 왼쪽 (모름) | 오른쪽 (알고 있음)</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Swipe and Keyboard actions javascript -->
+<script src="/static/js/app.js" defer></script>
+{% endblock %}
