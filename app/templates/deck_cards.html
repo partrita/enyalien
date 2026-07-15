@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Enyalien - Manage Cards inside {{ deck.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto w-full space-y-8 py-4">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <span class="text-xs font-semibold text-indigo-400 tracking-wider uppercase">Deck Detail & Cards</span>
+            <h2 class="text-3xl font-extrabold font-outfit text-white tracking-wide">📦 {{ deck.name }} 카드 관리</h2>
+            <p class="text-gray-400 text-sm mt-1">이 덱에 포함된 카드를 확인하고 추가, 수정, 삭제할 수 있습니다.</p>
+        </div>
+        <a href="/decks" class="btn btn-sm btn-outline border-white/10 text-gray-400 hover:bg-white/5 rounded-xl font-bold px-4 py-2.5 h-auto">
+            ⬅️ 내 덱 관리로 가기
+        </a>
+    </div>
+
+    <!-- Card Addition Panel (Tabs System for Single vs. Bulk) -->
+    <div class="glass-panel rounded-3xl p-6 md:p-8 border border-white/10 shadow-2xl">
+        <div class="flex border-b border-white/10 mb-6">
+            <button type="button" id="tab-single" class="py-2.5 px-5 border-b-2 border-indigo-500 font-bold text-sm text-white focus:outline-none transition-all">
+                📝 단일 카드 추가
+            </button>
+            <button type="button" id="tab-bulk" class="py-2.5 px-5 border-b-2 border-transparent font-semibold text-sm text-gray-400 hover:text-gray-200 focus:outline-none transition-all">
+                ⚡ 대량 카드 추가 (Bulk)
+            </button>
+        </div>
+
+        <form action="/decks/{{ deck.id }}/cards/add" method="POST" class="space-y-4">
+            <!-- Single Card Inputs -->
+            <div id="panel-single" class="space-y-4">
+                <div class="form-control w-full">
+                    <label class="label">
+                        <span class="label-text text-gray-300 font-medium">카드 앞면 (질문 / 단어)</span>
+                    </label>
+                    <input type="text" name="front" placeholder="앞면에 들어갈 텍스트 입력 (Markdown 지원)" 
+                           class="input input-bordered bg-base-200 border-white/10 text-base-content rounded-2xl w-full focus:outline-none focus:border-indigo-500" />
+                </div>
+                <div class="form-control w-full">
+                    <label class="label">
+                        <span class="label-text text-gray-300 font-medium">카드 뒷면 (정답 / 뜻 / 설명)</span>
+                    </label>
+                    <textarea name="back" rows="3" placeholder="뒷면에 들어갈 텍스트 또는 이미지/코드 블록 마크다운 입력" 
+                              class="textarea textarea-bordered bg-base-200 border-white/10 text-base-content rounded-2xl w-full focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+            </div>
+
+            <!-- Bulk Import Textarea -->
+            <div id="panel-bulk" class="space-y-4 hidden">
+                <div class="form-control w-full">
+                    <label class="label flex justify-between">
+                        <span class="label-text text-gray-300 font-medium">대량 카드 입력</span>
+                        <span class="label-text-alt text-gray-500 font-medium">형식: 앞면:뒷면 (한 줄에 한 쌍)</span>
+                    </label>
+                    <textarea name="bulk_data" rows="6" placeholder="예)&#10;Apple:사과&#10;Banana:바나나&#10;Orange:오렌지" 
+                              class="textarea textarea-bordered bg-base-200 border-white/10 text-base-content rounded-2xl w-full focus:outline-none focus:border-indigo-500 font-mono text-sm"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button type="submit" class="btn btn-primary text-primary-content font-bold px-6 py-3 rounded-2xl shadow-lg hover:shadow-primary/20 transition-all duration-300">
+                    카드 저장하기
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Cards List Table/Grid -->
+    <div class="space-y-4">
+        <h3 class="text-xl font-bold text-white font-outfit">📋 카드 목록 (총 {{ cards|length }}장)</h3>
+        
+        {% if cards %}
+            <div class="overflow-x-auto w-full glass-panel rounded-3xl border border-white/5 shadow-xl">
+                <table class="table w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-white/10 text-gray-400 font-semibold text-sm">
+                            <th class="py-4 px-6 w-5/12">앞면 (질문)</th>
+                            <th class="py-4 px-6 w-5/12">뒷면 (정답)</th>
+                            <th class="py-4 px-6 text-center w-2/12">작업</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for card in cards %}
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-all">
+                            <td class="py-4 px-6 break-words align-middle font-medium text-gray-200">
+                                {{ card.front | truncate(100) }}
+                            </td>
+                            <td class="py-4 px-6 break-words align-middle text-gray-400">
+                                {{ card.back | truncate(100) }}
+                            </td>
+                            <td class="py-4 px-6 text-center align-middle">
+                                <div class="flex justify-center items-center gap-2">
+                                    <a href="/decks/{{ deck.id }}/cards/edit/{{ card.id }}" class="btn btn-xs btn-outline btn-primary rounded-lg py-1 px-3.5 h-auto font-medium">
+                                        수정
+                                    </a>
+                                    <button hx-delete="/decks/{{ deck.id }}/cards/delete/{{ card.id }}"
+                                            hx-confirm="정말로 이 카드를 삭제하시겠습니까?"
+                                            hx-target="closest tr"
+                                            hx-swap="outerHTML"
+                                            class="btn btn-xs btn-outline btn-error rounded-lg py-1 px-3.5 h-auto font-medium">
+                                        삭제
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="glass-panel rounded-3xl p-12 border border-white/5 text-center text-gray-500 italic">
+                이 덱에 아직 추가된 카드가 없습니다. 상단 폼에서 카드를 등록해 보세요!
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    const tabSingle = document.getElementById('tab-single');
+    const tabBulk = document.getElementById('tab-bulk');
+    const panelSingle = document.getElementById('panel-single');
+    const panelBulk = document.getElementById('panel-bulk');
+
+    const inputFront = document.querySelector('input[name="front"]');
+    const textBack = document.querySelector('textarea[name="back"]');
+    const textBulk = document.querySelector('textarea[name="bulk_data"]');
+
+    tabSingle.addEventListener('click', () => {
+        tabSingle.classList.add('border-indigo-500', 'text-white');
+        tabSingle.classList.remove('border-transparent', 'text-gray-400');
+        tabBulk.classList.remove('border-indigo-500', 'text-white');
+        tabBulk.classList.add('border-transparent', 'text-gray-400');
+        
+        panelSingle.classList.remove('hidden');
+        panelBulk.classList.add('hidden');
+
+        // Clear other fields to prevent unintended submission behavior
+        textBulk.value = '';
+    });
+
+    tabBulk.addEventListener('click', () => {
+        tabBulk.classList.add('border-indigo-500', 'text-white');
+        tabBulk.classList.remove('border-transparent', 'text-gray-400');
+        tabSingle.classList.remove('border-indigo-500', 'text-white');
+        tabSingle.classList.add('border-transparent', 'text-gray-400');
+        
+        panelBulk.classList.remove('hidden');
+        panelSingle.classList.add('hidden');
+
+        // Clear other fields to prevent unintended submission behavior
+        inputFront.value = '';
+        textBack.value = '';
+    });
+</script>
+{% endblock %}

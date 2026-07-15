@@ -28,7 +28,7 @@
     <!-- Show Answer Trigger -->
     <div class="w-full mt-8">
         <button id="btn-show-answer"
-                hx-get="/review/card/{{ card.id }}?reveal=true{% if deck %}&deck={{ deck }}{% endif %}"
+                hx-get="/review/card/{{ card.id }}?reveal=true{% if deck_id %}&deck_id={{ deck_id }}{% endif %}"
                 hx-include="[name='mode']"
                 hx-target="#review-card"
                 hx-swap="outerHTML"

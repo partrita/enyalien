@@ -46,7 +46,7 @@
         <span class="text-xs uppercase tracking-wider font-bold text-gray-500">복습 방향 설정</span>
         <select id="review-mode-select" name="mode" 
                 class="select select-bordered select-sm bg-base-200 border-white/10 text-xs font-semibold focus:outline-none"
-                hx-get="/review/next{% if deck %}?deck={{ deck }}{% endif %}" 
+                hx-get="/review/next{% if deck_id %}?deck_id={{ deck_id }}{% endif %}" 
                 hx-target="#review-container" 
                 hx-trigger="change">
             <option value="forward" selected>기본 복습 (앞면 ➡️ 뒷면)</option>
@@ -56,7 +56,7 @@
     
     <!-- Outer reviews controller container -->
     <div id="review-container" class="w-full flex justify-center min-h-[450px]"
-         hx-get="/review/next{% if deck %}?deck={{ deck }}{% endif %}" 
+         hx-get="/review/next{% if deck_id %}?deck_id={{ deck_id }}{% endif %}" 
          hx-include="[name='mode']"
          hx-trigger="load" 
          hx-target="this" 

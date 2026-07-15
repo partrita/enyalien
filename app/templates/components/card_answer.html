@@ -35,7 +35,7 @@
     <div class="w-full mt-8 grid grid-cols-2 gap-4">
         <!-- Again Button (Forgot / Unknown) -->
         <button id="btn-again"
-                hx-post="/review/card/{{ card.id }}/submit?rating=again{% if deck %}&deck={{ deck }}{% endif %}"
+                hx-post="/review/card/{{ card.id }}/submit?rating=again{% if deck_id %}&deck_id={{ deck_id }}{% endif %}"
                 hx-include="[name='mode']"
                 hx-target="#review-container"
                 hx-swap="innerHTML"
@@ -45,7 +45,7 @@
         
         <!-- Good Button (Remembered / Know) -->
         <button id="btn-good"
-                hx-post="/review/card/{{ card.id }}/submit?rating=good{% if deck %}&deck={{ deck }}{% endif %}"
+                hx-post="/review/card/{{ card.id }}/submit?rating=good{% if deck_id %}&deck_id={{ deck_id }}{% endif %}"
                 hx-include="[name='mode']"
                 hx-target="#review-container"
                 hx-swap="innerHTML"

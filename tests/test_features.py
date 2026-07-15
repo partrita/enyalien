@@ -1,11 +1,11 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel, create_engine, Session, select
+from sqlmodel import SQLModel, create_engine, Session, select, func
 from sqlalchemy.pool import StaticPool
 
 from app.main import app
 from app.database import get_session
-from app.models import Card, ReviewLog
+from app.models import Card, ReviewLog, User, Deck, SessionToken
 
 # Isolated in-memory database with StaticPool to share connection across thread pools
 TEST_DATABASE_URL = "sqlite://"
@@ -32,196 +32,143 @@ def client_fixture(session):
     yield client
     app.dependency_overrides.clear()
 
-def test_bulk_import_cards(client, session):
-    # Test bulk data payload with multiple cards and trailing colons
-    bulk_input = "Front One:Back One\nFront Two:Back Two\nEmptyLine:\n"
-    
-    response = client.post("/cards/add", data={"bulk_data": bulk_input}, follow_redirects=False)
-    
-    # Importer returns a 303 Redirect to Home view
+
+def test_user_registration_and_login(client, session):
+    # 1. Register user
+    reg_data = {
+        "username": "tester",
+        "password": "testpassword",
+        "password_confirm": "testpassword",
+    }
+    response = client.post("/register", data=reg_data, follow_redirects=False)
     assert response.status_code == 303
+    assert response.headers["Location"] == "/login"
+
+    # Verify user created in DB
+    user = session.exec(select(User).where(User.username == "tester")).first()
+    assert user is not None
+
+    # 2. Login
+    login_data = {
+        "username": "tester",
+        "password": "testpassword",
+    }
+    response = client.post("/login", data=login_data, follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["Location"] == "/"
     
-    # Verify card database count and properties
-    cards = session.exec(select(Card)).all()
-    assert len(cards) == 2
-    assert cards[0].front == "Front One"
-    assert cards[0].back == "Back One"
-    assert cards[1].front == "Front Two"
-    assert cards[1].back == "Back Two"
+    # Session cookie should be set
+    assert "session_id" in client.cookies
 
-def test_reverse_review_mode_swap(client, session):
-    # Register card to test DB
-    card = Card(front="FrontQ", back="BackA")
-    session.add(card)
-    session.commit()
-    
-    # Query with mode=reverse parameter
-    response = client.get(f"/review/card/{card.id}?reveal=true&mode=reverse")
+
+def test_deck_creation_with_bulk_import(client, session):
+    # Register & Login
+    client.post("/register", data={"username": "tester", "password": "pass", "password_confirm": "pass"})
+    client.post("/login", data={"username": "tester", "password": "pass"})
+
+    # Create deck with bulk cards
+    deck_data = {
+        "name": "Spanish Vocab",
+        "bulk_data": "Uno:One\nDos:Two\nTres:Three"
+    }
+    response = client.post("/decks", data=deck_data, follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["Location"] == "/decks"
+
+    # Verify deck created
+    user = session.exec(select(User).where(User.username == "tester")).first()
+    deck = session.exec(select(Deck).where(Deck.name == "Spanish Vocab").where(Deck.user_id == user.id)).first()
+    assert deck is not None
+    assert deck.is_shared is False
+
+    # Verify cards created
+    cards = session.exec(select(Card).where(Card.deck_id == deck.id)).all()
+    assert len(cards) == 3
+    assert cards[0].front == "Uno"
+    assert cards[0].back == "One"
+
+
+def test_deck_sharing_and_import(client, session):
+    # 1. User1 creates and shares a deck
+    client.post("/register", data={"username": "user1", "password": "pass", "password_confirm": "pass"})
+    client.post("/login", data={"username": "user1", "password": "pass"})
+
+    client.post("/decks", data={"name": "Science", "bulk_data": "Atom:Unit"})
+    user1 = session.exec(select(User).where(User.username == "user1")).first()
+    deck_user1 = session.exec(select(Deck).where(Deck.name == "Science").where(Deck.user_id == user1.id)).first()
+
+    # Share deck
+    response = client.post(f"/decks/share/{deck_user1.id}", follow_redirects=False)
+    assert response.status_code == 303
+    session.refresh(deck_user1)
+    assert deck_user1.is_shared is True
+
+    # Logout User1
+    client.post("/logout")
+    client.cookies.clear()
+
+    # 2. User2 registers, logs in, and imports User1's shared deck
+    client.post("/register", data={"username": "user2", "password": "pass", "password_confirm": "pass"})
+    client.post("/login", data={"username": "user2", "password": "pass"})
+
+    # Check shared decks view
+    response = client.get("/decks/shared")
     assert response.status_code == 200
-    
-    # Question view (rendered_front) should output BackA, answer should output FrontQ
-    html_content = response.text
-    assert "BackA" in html_content  # Flipped front
-    assert "FrontQ" in html_content  # Flipped back
+    assert "Science" in response.text
+    assert "user1" in response.text
+
+    # Import deck
+    response = client.post(f"/decks/shared/import/{deck_user1.id}", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["Location"] == "/decks"
+
+    # Verify deck cloned for User2
+    user2 = session.exec(select(User).where(User.username == "user2")).first()
+    cloned_name = "Science (shared by user1)"
+    deck_user2 = session.exec(select(Deck).where(Deck.name == cloned_name).where(Deck.user_id == user2.id)).first()
+    assert deck_user2 is not None
+    assert deck_user2.is_shared is False  # Cloned deck is private
+
+    # Verify cards cloned
+    cards_user2 = session.exec(select(Card).where(Card.deck_id == deck_user2.id)).all()
+    assert len(cards_user2) == 1
+    assert cards_user2[0].front == "Atom"
+    assert cards_user2[0].back == "Unit"
 
 
-def test_edit_card_view_and_action(client, session):
-    # Register card to test DB
-    card = Card(front="OriginalFront", back="OriginalBack")
-    session.add(card)
-    session.commit()
+def test_nested_card_management(client, session):
+    # Register & Login
+    client.post("/register", data={"username": "tester", "password": "pass", "password_confirm": "pass"})
+    client.post("/login", data={"username": "tester", "password": "pass"})
 
-    # 1. Test GET edit view
-    response = client.get(f"/cards/edit/{card.id}")
+    # Create deck
+    client.post("/decks", data={"name": "History"})
+    user = session.exec(select(User).where(User.username == "tester")).first()
+    deck = session.exec(select(Deck).where(Deck.name == "History").where(Deck.user_id == user.id)).first()
+
+    # 1. Add card
+    card_data = {"front": "Napoleon", "back": "French General"}
+    response = client.post(f"/decks/{deck.id}/cards/add", data=card_data, follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["Location"] == f"/decks/{deck.id}/cards"
+
+    card = session.exec(select(Card).where(Card.deck_id == deck.id)).first()
+    assert card is not None
+    assert card.front == "Napoleon"
+
+    # 2. Edit card
+    edit_data = {"front": "Napoleon Bonaparte", "back": "Emperor of the French"}
+    response = client.post(f"/decks/{deck.id}/cards/edit/{card.id}", data=edit_data, follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["Location"] == f"/decks/{deck.id}/cards"
+
+    session.refresh(card)
+    assert card.front == "Napoleon Bonaparte"
+    assert card.back == "Emperor of the French"
+
+    # 3. Delete card
+    response = client.delete(f"/decks/{deck.id}/cards/delete/{card.id}")
     assert response.status_code == 200
-    assert "OriginalFront" in response.text
-    assert "OriginalBack" in response.text
 
-    # 2. Test POST edit action
-    post_data = {"front": "UpdatedFront", "back": "UpdatedBack"}
-    response = client.post(
-        f"/cards/edit/{card.id}", data=post_data, follow_redirects=False
-    )
-    assert response.status_code == 303  # Redirect to /cards
-
-    # 3. Verify changes committed in DB
-    session.expire(card)  # Refresh state from DB
-    updated_card = session.get(Card, card.id)
-    assert updated_card.front == "UpdatedFront"
-    assert updated_card.back == "UpdatedBack"
-
-
-def test_delete_card_action(client, session):
-    # Register card to test DB
-    card = Card(front="ToDeleteFront", back="ToDeleteBack")
-    session.add(card)
-    session.commit()
-
-    # Send DELETE request
-    response = client.delete(f"/cards/delete/{card.id}")
-    assert response.status_code == 200
-
-    # Verify card is gone
     deleted_card = session.get(Card, card.id)
     assert deleted_card is None
-
-
-def test_deck_bulk_import_and_filtering(client, session):
-    # 1. Bulk import into a custom deck
-    bulk_input = "Hello:Annyeong\nWorld:Segye"
-    response = client.post(
-        "/cards/add",
-        data={"bulk_data": bulk_input, "deck": "Korean Study"},
-        follow_redirects=False
-    )
-    assert response.status_code == 303
-
-    # Verify DB values have correct deck assigned
-    cards = session.exec(select(Card)).all()
-    assert len(cards) == 2
-    assert cards[0].deck == "Korean Study"
-    assert cards[1].deck == "Korean Study"
-
-    # Add another card in a different deck
-    other_card = Card(front="Bonjour", back="Hello", deck="French Study")
-    session.add(other_card)
-    session.commit()
-
-    # 2. Query list view without filters (should show both decks)
-    response_all = client.get("/cards")
-    assert response_all.status_code == 200
-    assert "Korean Study" in response_all.text
-    assert "French Study" in response_all.text
-
-    # 3. Query list view filtered by 'Korean Study'
-    response_korean = client.get("/cards?deck=Korean+Study")
-    assert response_korean.status_code == 200
-    assert "Korean Study" in response_korean.text
-    # Should not list French Study card contents
-    assert "Bonjour" not in response_korean.text
-
-
-def test_deck_review_queue_filtering(client, session):
-    # Insert card into "Math"
-    card_math = Card(front="MathQ", back="MathA", deck="Math")
-    # Insert card into "History"
-    card_history = Card(front="HistoryQ", back="HistoryA", deck="History")
-    session.add(card_math)
-    session.add(card_history)
-    session.commit()
-
-    # 1. Query next due card for Math deck
-    response_math = client.get("/review/next?deck=Math")
-    assert response_math.status_code == 200
-    assert "MathQ" in response_math.text
-    assert "HistoryQ" not in response_math.text
-
-    # 2. Query next due card for History deck
-    response_history = client.get("/review/next?deck=History")
-    assert response_history.status_code == 200
-    assert "HistoryQ" in response_history.text
-    assert "MathQ" not in response_history.text
-
-    # 3. Submit evaluation inside Math deck scope
-    response_submit = client.post(
-        f"/review/card/{card_math.id}/submit?rating=good&deck=Math",
-        follow_redirects=False
-    )
-    assert response_submit.status_code == 200
-    # Because there are no more due Math cards, it should return the empty completion fragment
-    assert "오늘의 복습 완료!" in response_submit.text
-
-
-def test_deck_edit_card_action(client, session):
-    # Insert card in default deck
-    card = Card(front="FrontText", back="BackText", deck="Default")
-    session.add(card)
-    session.commit()
-
-    # Submit edit POST with a new deck name
-    post_data = {"front": "FrontText", "back": "BackText", "deck": "Science Deck"}
-    response = client.post(
-        f"/cards/edit/{card.id}", data=post_data, follow_redirects=False
-    )
-    assert response.status_code == 303  # Redirect to cards manager
-
-    # Check database model updates
-    session.expire(card)
-    updated = session.get(Card, card.id)
-    assert updated.deck == "Science Deck"
-
-
-def test_deck_management_page_and_crud(client, session):
-    # 1. Setup multiple cards for a deck
-    card1 = Card(front="Word1", back="Mean1", deck="Vocab")
-    card2 = Card(front="Word2", back="Mean2", deck="Vocab")
-    session.add(card1)
-    session.add(card2)
-    session.commit()
-
-    # 2. Verify decks page lists Vocab
-    response = client.get("/decks")
-    assert response.status_code == 200
-    assert "Vocab" in response.text
-    assert "총 2장" in response.text
-
-    # 3. Rename deck Vocab -> Glossary
-    edit_data = {"old_name": "Vocab", "new_name": "Glossary"}
-    response_edit = client.post("/decks/edit", data=edit_data, follow_redirects=False)
-    assert response_edit.status_code == 303
-
-    # Check updated database records
-    session.expire_all()
-    cards = session.exec(select(Card)).all()
-    assert len(cards) == 2
-    assert all(c.deck == "Glossary" for c in cards)
-
-    # 4. Delete deck Glossary
-    response_delete = client.delete("/decks/delete/Glossary")
-    assert response_delete.status_code == 200
-
-    # Check cards are cascade deleted
-    remaining_cards = session.exec(select(Card)).all()
-    assert len(remaining_cards) == 0
-
-

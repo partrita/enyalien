@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Enyalien - Shared Decks{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto w-full space-y-8 py-4">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-extrabold font-outfit text-white tracking-wide">🌐 공유된 덱 둘러보기</h2>
+            <p class="text-gray-400 text-sm mt-1">다른 유저들이 공개한 덱을 내 라이브러리로 가져와 복습할 수 있습니다.</p>
+        </div>
+        <a href="/decks" class="btn btn-sm btn-outline border-white/10 text-gray-400 hover:bg-white/5 rounded-xl font-bold px-4 py-2.5 h-auto">
+            ⬅️ 내 덱 관리로 돌아가기
+        </a>
+    </div>
+
+    <!-- Shared Decks List Grid -->
+    <div class="space-y-4">
+        {% if decks %}
+            <div class="flex flex-col gap-4">
+                {% for deck in decks %}
+                <div class="glass-panel rounded-2xl p-6 border border-white/5 shadow-xl flex flex-col md:flex-row justify-between items-center gap-6 hover:bg-white/5 transition-all">
+                    <!-- Left: Deck and Owner Metadata -->
+                    <div class="w-full md:w-2/3 space-y-1">
+                        <h4 class="text-lg font-bold text-gray-200 break-words">{{ deck.name }}</h4>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-indigo-400 font-semibold">제작자: {{ deck.owner_name }}</span>
+                            <span class="text-xs text-gray-400 font-medium">총 {{ deck.total_count }}장의 카드</span>
+                        </div>
+                    </div>
+
+                    <!-- Right: Import Action -->
+                    <div class="flex justify-end w-full md:w-auto">
+                        <form action="/decks/shared/import/{{ deck.id }}" method="POST" class="m-0">
+                            <button type="submit" class="btn btn-sm btn-primary rounded-xl font-bold px-5 py-2.5 h-auto">
+                                내 라이브러리로 복제하기
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="glass-panel rounded-3xl p-12 border border-white/5 text-center text-gray-500 italic">
+                현재 공유된 다른 유저의 덱이 없습니다.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

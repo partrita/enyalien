@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from app.database import init_db
-from app.routes import router
+from app.routes import router, RedirectException, redirect_exception_handler
 
 
 @asynccontextmanager
@@ -20,6 +20,8 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+app.add_exception_handler(RedirectException, redirect_exception_handler)
 
 # Mount static files (javascript swipe controllers and stylesheets)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

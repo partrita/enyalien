@@ -4,14 +4,14 @@ from app.models import Card
 
 
 def test_new_card_defaults():
-    card = Card(front="Question", back="Answer")
+    card = Card(deck_id=1, front="Question", back="Answer")
     assert card.repetition == 0
     assert card.interval == 1
     assert card.easiness == 2.5
 
 
 def test_review_good_progression():
-    card = Card(front="Question", back="Answer")
+    card = Card(deck_id=1, front="Question", back="Answer")
 
     # 1st correct review
     log1 = card.apply_review("good")
@@ -40,7 +40,7 @@ def test_review_good_progression():
 
 
 def test_review_again_resets():
-    card = Card(front="Question", back="Answer")
+    card = Card(deck_id=1, front="Question", back="Answer")
 
     # Set to a highly progressed state
     card.repetition = 4
@@ -62,7 +62,7 @@ def test_review_again_resets():
 
 
 def test_next_review_timing():
-    card = Card(front="Question", back="Answer")
+    card = Card(deck_id=1, front="Question", back="Answer")
     card.interval = 5
 
     now = datetime.now()

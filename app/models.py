@@ -3,9 +3,30 @@ from typing import Optional
 from sqlmodel import SQLModel, Field
 
 
+class User(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str = Field(unique=True, index=True, nullable=False)
+    hashed_password: str = Field(nullable=False)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class Deck(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(nullable=False)
+    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
+    is_shared: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class SessionToken(SQLModel, table=True):
+    token: str = Field(primary_key=True)
+    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
 class Card(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    deck: str = Field(default="Default", index=True, description="Name of the deck this card belongs to")
+    deck_id: int = Field(foreign_key="deck.id", ondelete="CASCADE")
     front: str = Field(description="Front of the card (Markdown supported)")
     back: str = Field(description="Back of the card (Markdown supported)")
     created_at: datetime = Field(default_factory=datetime.now)
@@ -64,7 +85,7 @@ class Card(SQLModel, table=True):
 
 class ReviewLog(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    card_id: Optional[int] = Field(default=None, foreign_key="card.id")
+    card_id: Optional[int] = Field(default=None, foreign_key="card.id", ondelete="CASCADE")
     reviewed_at: datetime = Field(default_factory=datetime.now)
     rating: str  # 'again' or 'good'
     previous_repetition: int
@@ -73,3 +94,23 @@ class ReviewLog(SQLModel, table=True):
     new_interval: int
     previous_easiness: float
     new_easiness: float
+
+
+import hashlib
+import os
+
+def hash_password(password: str) -> str:
+    salt = os.urandom(16)
+    key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+    return salt.hex() + ":" + key.hex()
+
+def verify_password(password: str, hashed: str) -> bool:
+    try:
+        salt_hex, key_hex = hashed.split(":", 1)
+        salt = bytes.fromhex(salt_hex)
+        key = bytes.fromhex(key_hex)
+        new_key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+        return key == new_key
+    except Exception:
+        return False
+

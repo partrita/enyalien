@@ -2,8 +2,6 @@ import os
 from sqlmodel import create_engine, SQLModel, Session
 
 # Define SQLite database URL.
-# Defaults to a local file 'enyalien.db' inside the project directory,
-# but can be pointed to a persistent path like '/data/enyalien.db' in Docker.
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///enyalien.db")
 
 # connect_args={"check_same_thread": False} is required for SQLite in multi-threaded FastAPI apps
@@ -13,30 +11,56 @@ engine = create_engine(
 
 
 def init_db():
-    """Create all tables in the database and seed initial amino acids if empty."""
+    """Create all tables in the database and seed initial admin + amino acids deck if empty."""
     from datetime import datetime
     from sqlmodel import select, func, text
-    from app.models import Card
+    from app.models import Card, User, Deck, hash_password
+
+    # Check if migration/reset is needed (transition from old schema string-based deck to deck_id)
+    recreate = False
+    try:
+        with Session(engine) as session:
+            columns_info = session.execute(text("PRAGMA table_info(card)")).all()
+            column_names = [col[1] for col in columns_info]
+            # If the old column 'deck' exists but the new column 'deck_id' doesn't, we drop and recreate
+            if "deck" in column_names and "deck_id" not in column_names:
+                recreate = True
+    except Exception as e:
+        print(f"Schema detection check bypassed: {e}")
+
+    if recreate:
+        print("Old database schema detected. Dropping all tables to rebuild User & Deck normalized schema...")
+        try:
+            SQLModel.metadata.drop_all(engine)
+        except Exception as e:
+            print(f"Failed to drop old tables: {e}")
 
     SQLModel.metadata.create_all(engine)
 
-    # Automated migration: Add 'deck' column if it doesn't exist (preexisting database)
     with Session(engine) as session:
-        try:
-            columns_info = session.execute(text("PRAGMA table_info(card)")).all()
-            column_names = [col[1] for col in columns_info]
-            if "deck" not in column_names:
-                session.execute(text("ALTER TABLE card ADD COLUMN deck VARCHAR DEFAULT 'Default'"))
-                session.execute(text("CREATE INDEX IF NOT EXISTS ix_card_deck ON card (deck)"))
-                session.commit()
-                print("Database migration: Added 'deck' column to card table.")
-        except Exception as e:
-            print(f"Database migration check failed or not applicable: {e}")
+        # Check if we need to seed the default user
+        user_count = session.exec(select(func.count(User.id))).one()
+        if user_count == 0:
+            # Create default admin user
+            admin_user = User(
+                username="admin",
+                hashed_password=hash_password("admin123"),
+            )
+            session.add(admin_user)
+            session.commit()
+            session.refresh(admin_user)
 
-    with Session(engine) as session:
-        # Check if database is empty
-        card_count = session.exec(select(func.count(Card.id))).one()
-        if card_count == 0:
+            # Create default deck for admin user
+            amino_deck = Deck(
+                name="amino acid",
+                user_id=admin_user.id,
+                is_shared=True,  # Share it by default so other users can see and import it
+            )
+            session.add(amino_deck)
+            session.commit()
+            session.refresh(amino_deck)
+
+            # Seed amino acid cards
             amino_acids = [
                 ("알라닌 (Alanine)", "3문자: Ala  \n1문자: A"),
                 ("아르기닌 (Arginine)", "3문자: Arg  \n1문자: R"),
@@ -62,13 +86,14 @@ def init_db():
             for front, back in amino_acids:
                 session.add(
                     Card(
-                        deck="amino acid",
+                        deck_id=amino_deck.id,
                         front=front,
                         back=back,
                         next_review=datetime.now(),
                     )
                 )
             session.commit()
+            print("Database initialized and seeded with default admin user and amino acids deck.")
 
 
 def get_session():

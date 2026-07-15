@@ -72,12 +72,12 @@
                     <div class="flex items-center gap-3">
                         {% if deck.due_count > 0 %}
                             <span class="badge badge-primary font-mono font-bold text-xs py-2 px-2.5">{{ deck.due_count }} 복습</span>
-                            <a href="/review?deck={{ deck.name }}" class="btn btn-sm btn-primary text-primary-content rounded-xl font-bold">
+                            <a href="/review?deck_id={{ deck.id }}" class="btn btn-sm btn-primary text-primary-content rounded-xl font-bold">
                                 복습
                             </a>
                         {% else %}
                             <span class="badge badge-ghost border-white/5 text-gray-500 font-mono text-xs py-2 px-2.5">완료</span>
-                            <a href="/review?deck={{ deck.name }}" class="btn btn-sm btn-ghost border-white/10 text-gray-400 hover:bg-white/5 rounded-xl font-bold">
+                            <a href="/review?deck_id={{ deck.id }}" class="btn btn-sm btn-ghost border-white/10 text-gray-400 hover:bg-white/5 rounded-xl font-bold">
                                 복습
                             </a>
                         {% endif %}

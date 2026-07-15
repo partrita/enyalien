@@ -5,21 +5,58 @@
 {% block content %}
 <div class="max-w-4xl mx-auto w-full space-y-8 py-4">
     <!-- Header -->
-    <div>
-        <h2 class="text-3xl font-extrabold font-outfit text-white tracking-wide">🗂️ 덱 관리 (Manage Decks)</h2>
-        <p class="text-gray-400 text-sm mt-1">덱의 이름을 변경하거나 덱에 속한 모든 카드를 일괄 삭제할 수 있습니다.</p>
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-extrabold font-outfit text-white tracking-wide">🗂️ 덱 관리 (Manage Decks)</h2>
+            <p class="text-gray-400 text-sm mt-1">나만의 카드 덱을 생성하고 관리하며 다른 유저와 공유할 수 있습니다.</p>
+        </div>
+        <a href="/decks/shared" class="btn btn-outline border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 hover:border-indigo-500/50 rounded-2xl font-bold px-5">
+            공유된 덱 둘러보기 ➡️
+        </a>
     </div>
 
-    <!-- Decks List Grid -->
+    <!-- Create New Deck Card -->
+    <div class="glass-panel rounded-3xl p-6 md:p-8 border border-white/10 shadow-2xl space-y-6">
+        <h3 class="text-xl font-bold text-white font-outfit flex items-center gap-2">✨ 새 덱 추가 (Add New Deck)</h3>
+        
+        <form action="/decks" method="POST" class="space-y-4">
+            <div class="form-control w-full">
+                <label class="label">
+                    <span class="label-text text-gray-300 font-medium">덱 이름</span>
+                </label>
+                <input type="text" name="name" placeholder="예: 스페인어 기초, 정보처리기사" 
+                       class="input input-bordered bg-base-200 border-white/10 text-base-content rounded-2xl w-full focus:outline-none focus:border-indigo-500" 
+                       required />
+            </div>
+
+            <div class="form-control w-full">
+                <label class="label flex justify-between">
+                    <span class="label-text text-gray-300 font-medium">벌크 카드 추가 (선택 사항)</span>
+                    <span class="label-text-alt text-gray-500 font-medium">형식: 앞면:뒷면 (한 줄에 하나씩)</span>
+                </label>
+                <textarea name="bulk_data" rows="4" placeholder="예)&#10;Hola:안녕&#10;Gracias:감사합니다&#10;Amigo:친구"
+                          class="textarea textarea-bordered bg-base-200 border-white/10 text-base-content rounded-2xl w-full focus:outline-none focus:border-indigo-500 font-mono text-sm"></textarea>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button type="submit" class="btn btn-primary text-primary-content font-bold px-6 py-3 rounded-2xl shadow-lg hover:shadow-primary/20 transition-all duration-300">
+                    덱 생성하기
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Decks List Section -->
     <div class="space-y-4">
+        <h3 class="text-xl font-bold text-white font-outfit">🗂️ 내 덱 목록</h3>
         {% if decks %}
             <div class="flex flex-col gap-4">
                 {% for deck in decks %}
                 <div class="deck-item-card glass-panel rounded-2xl p-6 border border-white/5 shadow-xl flex flex-col md:flex-row justify-between items-center gap-6 hover:bg-white/5 transition-all">
                     <!-- Left: Metadata Info -->
-                    <div class="w-full md:w-1/3">
+                    <div class="w-full md:w-1/3 space-y-1">
                         <h4 class="text-lg font-bold text-gray-200 break-words">{{ deck.name }}</h4>
-                        <div class="flex items-center gap-2 mt-2">
+                        <div class="flex items-center gap-2">
                             <span class="text-xs text-gray-400 font-medium">총 {{ deck.total_count }}장</span>
                             {% if deck.due_count > 0 %}
                                 <span class="badge badge-primary font-mono font-bold text-xs py-1.5 px-2">{{ deck.due_count }} 복습</span>
@@ -31,8 +68,7 @@
 
                     <!-- Center: Inline Renaming Form -->
                     <div class="w-full md:flex-grow">
-                        <form action="/decks/edit" method="POST" class="flex gap-2 items-center w-full">
-                            <input type="hidden" name="old_name" value="{{ deck.name }}" />
+                        <form action="/decks/edit/{{ deck.id }}" method="POST" class="flex gap-2 items-center w-full m-0">
                             <input type="text" name="new_name" value="{{ deck.name }}" 
                                    placeholder="새 덱 이름 입력"
                                    class="input input-bordered input-sm bg-base-200 text-base-content border-base-content/15 rounded-xl focus:border-indigo-500 focus:outline-none w-full text-sm py-5" 
@@ -45,15 +81,23 @@
 
                     <!-- Right: Actions -->
                     <div class="flex justify-end gap-2 w-full md:w-auto">
-                        <a href="/review?deck={{ deck.name }}" class="btn btn-sm btn-review rounded-xl font-bold px-4">
+                        <a href="/review?deck_id={{ deck.id }}" class="btn btn-sm btn-review rounded-xl font-bold px-4">
                             복습
                         </a>
-                        <button hx-delete="/decks/delete/{{ deck.name }}"
+                        <a href="/decks/{{ deck.id }}/cards" class="btn btn-sm btn-outline btn-primary rounded-xl font-bold px-4">
+                            카드 관리
+                        </a>
+                        <form action="/decks/share/{{ deck.id }}" method="POST" class="m-0">
+                            <button type="submit" class="btn btn-sm {% if deck.is_shared %}btn-success text-success-content{% else %}btn-outline btn-ghost border-white/10 text-gray-400{% endif %} rounded-xl font-bold px-4">
+                                {% if deck.is_shared %}공유됨{% else %}공유하기{% endif %}
+                            </button>
+                        </form>
+                        <button hx-delete="/decks/delete/{{ deck.id }}"
                                 hx-confirm="정말로 이 덱을 삭제하시겠습니까? 소속된 {{ deck.total_count }}장의 카드도 영구 삭제됩니다."
                                 hx-target="closest .deck-item-card"
                                 hx-swap="outerHTML"
                                 class="btn btn-sm btn-outline btn-error rounded-xl font-bold px-4">
-                            덱 삭제
+                            삭제
                         </button>
                     </div>
                 </div>
@@ -61,7 +105,7 @@
             </div>
         {% else %}
             <div class="glass-panel rounded-3xl p-12 border border-white/5 text-center text-gray-500 italic">
-                등록된 덱이 존재하지 않습니다. 카드를 추가하면 자동으로 덱이 생성됩니다.
+                등록된 덱이 존재하지 않습니다. 상단의 폼에서 첫 번째 덱을 만들어보세요!
             </div>
         {% endif %}
     </div>

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Enyalien - Login{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto w-full py-12">
+    <div class="glass-panel rounded-3xl p-8 md:p-10 border border-white/10 shadow-2xl space-y-6">
+        <div class="text-center space-y-2">
+            <h2 class="text-3xl font-extrabold font-outfit text-white tracking-wide">로그인</h2>
+            <p class="text-gray-400 text-sm">스마트 플래시카드 복습을 시작하세요.</p>
+        </div>
+
+        <form action="/login" method="POST" class="space-y-4">
+            <div class="form-control w-full">
+                <label class="label">
+                    <span class="label-text text-gray-300 font-medium">아이디</span>
+                </label>
+                <input type="text" name="username" placeholder="아이디 입력" 
+                       class="input input-bordered bg-base-200 border-white/10 text-base-content rounded-2xl w-full focus:outline-none focus:border-indigo-500" 
+                       required />
+            </div>
+
+            <div class="form-control w-full">
+                <label class="label">
+                    <span class="label-text text-gray-300 font-medium">비밀번호</span>
+                </label>
+                <input type="password" name="password" placeholder="비밀번호 입력" 
+                       class="input input-bordered bg-base-200 border-white/10 text-base-content rounded-2xl w-full focus:outline-none focus:border-indigo-500" 
+                       required />
+            </div>
+
+            <div class="pt-4">
+                <button type="submit" class="btn btn-primary w-full text-primary-content font-bold py-4 h-auto rounded-2xl shadow-lg hover:shadow-primary/20 transition-all duration-300">
+                    로그인
+                </button>
+            </div>
+        </form>
+
+        <div class="text-center text-sm text-gray-400 pt-2">
+            계정이 없으신가요? <a href="/register" class="text-indigo-400 hover:text-indigo-300 font-bold transition-all ml-1">회원가입</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
